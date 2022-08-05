@@ -132,8 +132,8 @@ static int ext2_alloc_block (struct inode * inode, unsigned long goal, int *err)
 }
 
 typedef struct {
-	__le32	*p;
-	__le32	key;
+	__le32	*p; /*p存放读入内存的块条目（即跟踪路径条目）地址，地址存放的内容即key*/
+	__le32	key; /*key存放跟踪路径下一级的块号，最后一级存储的是数据块号*/
 	struct buffer_head *bh;
 } Indirect;
 
@@ -143,6 +143,10 @@ static inline void add_chain(Indirect *p, struct buffer_head *bh, __le32 *v)
 	p->bh = bh;
 }
 
+/*
+ * 入参form是chain[0]的地址，to是chain[x]的地址，该函数主要验证chain[0->x]是否有效
+ * 返回true表示to是chain中最后一个正确有效的元素,即chain[0->x].key == *(chain[0->x]->p)
+ * */
 static inline int verify_chain(Indirect *from, Indirect *to)
 {
 	while (from <= to && from->key == *from->p)
@@ -421,7 +425,7 @@ static int ext2_alloc_branch(struct inode *inode,
 		int nr = ext2_alloc_block(inode, parent, &err);
 		if (!nr)
 			break;
-		branch[n].key = cpu_to_le32(nr);
+		branch[n].key = cpu_to_le32(nr); /*基于新分配的块完善块号路径*/
 		/*
 		 * Get buffer_head for parent block, zero it out and set 
 		 * the pointer to new one, then send parent to disk.
@@ -431,7 +435,7 @@ static int ext2_alloc_branch(struct inode *inode,
 		memset(bh->b_data, 0, blocksize);
 		branch[n].bh = bh;
 		branch[n].p = (__le32 *) bh->b_data + offsets[n];
-		*branch[n].p = branch[n].key;
+		*branch[n].p = branch[n].key; /*在内存（物理介质块读取到缓存）中的建立块的连接*/
 		set_buffer_uptodate(bh);
 		unlock_buffer(bh);
 		mark_buffer_dirty_inode(bh, inode);
@@ -540,13 +544,18 @@ int ext2_get_block(struct inode *inode, sector_t iblock, struct buffer_head *bh_
 	unsigned long goal;
 	int left;
 	int boundary = 0;
-	/*LL:计算块的路径，depth为多层间接层级数，offsets每一层级的偏移*/
+	/*LL:计算块的路径，返回值depth为多层间接层级数，offsets每一层级的偏移*/
 	int depth = ext2_block_to_path(inode, iblock, offsets, &boundary);
 
 	if (depth == 0)
 		goto out;
 
 reread:
+	/*
+	 * LL:根据depth/offset获取iblock在存储介质中的块号路径，通过数组chain返回结果
+	 * 返回值partial为null时表明路径中的块在存储介质中均已分配，否则表示partial这
+	 * 一层指向的块未分配。
+	 * */
 	partial = ext2_get_branch(inode, depth, offsets, chain, &err);
 
 	/* Simplest case - block found, no allocation needed */
@@ -583,7 +592,7 @@ out:
 	if (ext2_find_goal(inode, iblock, chain, partial, &goal) < 0)
 		goto changed;
 
-	left = (chain + depth) - partial;
+	left = (chain + depth) - partial; /*left为块号路径中未实际分配块的层级个数*/
 	/**
 	 * 在ext2分区中搜索一个空闲块。
 	 */
@@ -1042,11 +1051,13 @@ void ext2_set_inode_flags(struct inode *inode)
 		inode->i_flags |= S_DIRSYNC;
 }
 
+/*从存储介质读取ext2 inode到内存中vfs inode */
 void ext2_read_inode (struct inode * inode)
 {
 	struct ext2_inode_info *ei = EXT2_I(inode);
 	ino_t ino = inode->i_ino;
 	struct buffer_head * bh;
+	/*从存储介质读取ext2 inode*/
 	struct ext2_inode * raw_inode = ext2_get_inode(inode->i_sb, ino, &bh);
 	int n;
 

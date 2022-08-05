@@ -41,6 +41,8 @@ static inline int sysfs_init(void)
 
 /**
  * 文件系统描述符散列表。
+ * 某vfsmount其哈希项的索引计算基于父vfsmount地址以及它在父文件系统中的装载点dentry地址。
+ * 因此已知父vfsmount和dentry，可以根据哈希链表找出挂载在该dentry的子vfsmount。
  */
 static struct list_head *mount_hashtable;
 static int hash_mask, hash_bits;
@@ -110,6 +112,7 @@ struct vfsmount *lookup_mnt(struct vfsmount *mnt, struct dentry *dentry)
 			break;
 		p = list_entry(tmp, struct vfsmount, mnt_hash);
 		if (p->mnt_parent == mnt && p->mnt_mountpoint == dentry) {
+			/*找到挂载在入参mnt/dentry处的p(vfsmount)*/
 			found = mntget(p);
 			break;
 		}
@@ -875,6 +878,9 @@ int do_add_mount(struct vfsmount *newmnt, struct nameidata *nd,
 	down_write(&current->namespace->sem);
 	/* Something was mounted here while we slept */
 	/* 找到最后一次装载到其上的文件系统根，我们将本次装载到该目标路径 */
+	/* 一个路径(挂载点)可能已被多个文件系统实例挂载，新挂载需要挂载到最后一次挂载实例上
+	 * 而dentry->d_mounted是否为0用于判断当前dentry之上是否还存在挂载,而follow_down()
+	 * 用于跟踪到下一层的挂载实例*/
 	while(d_mountpoint(nd->dentry) && follow_down(&nd->mnt, &nd->dentry))
 		;
 	err = -EINVAL;

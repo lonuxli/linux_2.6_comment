@@ -434,6 +434,7 @@ void ext2_set_link(struct inode *dir, struct ext2_dir_entry_2 *de,
 /*
  *	Parent is locked.
  */
+/*入参entry关联到inode文件，修改dentry指向的父目录的文件条目内存内容，使得该文件条目指向inode号*/
 int ext2_add_link (struct dentry *dentry, struct inode *inode)
 {
 	struct inode *dir = dentry->d_parent->d_inode;
@@ -443,7 +444,7 @@ int ext2_add_link (struct dentry *dentry, struct inode *inode)
 	unsigned reclen = EXT2_DIR_REC_LEN(namelen);
 	unsigned short rec_len, name_len;
 	struct page *page = NULL;
-	ext2_dirent * de;
+	ext2_dirent * de; /*ext2_dirent为ext2目录结构*/
 	unsigned long npages = dir_pages(dir);
 	unsigned long n;
 	char *kaddr;

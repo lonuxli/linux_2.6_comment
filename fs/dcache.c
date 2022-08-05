@@ -70,6 +70,7 @@ static unsigned int d_hash_mask;
 static unsigned int d_hash_shift;
 /**
  * 目录项的散列表。它是一个指针数组，每个指针是一个具有相同散列值的dentry链表
+ * 散列表索引值基于所查找dentry的父dentry及当前dentry name计算。
  */
 static struct hlist_head *dentry_hashtable;
 /**
@@ -1103,6 +1104,9 @@ struct dentry * d_lookup(struct dentry * parent, struct qstr * name)
 	return dentry;
 }
 
+/*__d_lookup函数在内存缓存中查找目标dentry。入参parent为目标dentry的父dentry，name为目标dentry的名称。
+ * 查找时先根据父dentry和目标name hash计算hash链表索引，再遍历hash链表，比对父dentry和name即可找出
+ * 某目录下的目标dentry（前提是内存缓存中已存在）*/
 struct dentry * __d_lookup(struct dentry * parent, struct qstr * name)
 {
 	unsigned int len = name->len;
@@ -1120,8 +1124,10 @@ struct dentry * __d_lookup(struct dentry * parent, struct qstr * name)
 
 		dentry = hlist_entry(node, struct dentry, d_hash);
 
+		/*1-比较name的hash值*/
 		if (dentry->d_name.hash != hash)
 			continue;
+		/*2-比较父dentry*/
 		if (dentry->d_parent != parent)
 			continue;
 
@@ -1139,6 +1145,7 @@ struct dentry * __d_lookup(struct dentry * parent, struct qstr * name)
 		 * It is safe to compare names since d_move() cannot
 		 * change the qstr (protected by d_lock).
 		 */
+		/*3-比较完整名称name*/
 		qstr = &dentry->d_name;
 		if (parent->d_op && parent->d_op->d_compare) {
 			if (parent->d_op->d_compare(parent, qstr, name))
@@ -1150,6 +1157,7 @@ struct dentry * __d_lookup(struct dentry * parent, struct qstr * name)
 				goto next;
 		}
 
+		/*4-前3步比较通过，算是找到了缓存中的目标dentry*/
 		if (!d_unhashed(dentry)) {
 			atomic_inc(&dentry->d_count);
 			found = dentry;

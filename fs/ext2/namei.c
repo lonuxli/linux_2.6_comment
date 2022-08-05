@@ -51,6 +51,7 @@ static inline void ext2_dec_count(struct inode *inode)
 	mark_inode_dirty(inode);
 }
 
+/*将entry与inode关联起来，包括修改当前文件父目录的inode的文件条目内容指向当前文件*/
 static inline int ext2_add_nondir(struct dentry *dentry, struct inode *inode)
 {
 	int err = ext2_add_link(dentry, inode);
@@ -282,7 +283,7 @@ out_dir:
 }
 
 /**
- * ext2的unlink实现方法。
+ * ext2的unlink实现方法,删除父目录inode中的文件条目。
  */
 static int ext2_unlink(struct inode * dir, struct dentry *dentry)
 {
@@ -311,6 +312,7 @@ static int ext2_rmdir (struct inode * dir, struct dentry *dentry)
 	struct inode * inode = dentry->d_inode;
 	int err = -ENOTEMPTY;
 
+	/*如果当前目录inode的文件条目中还有条目（即子文件或子目录），则rm操作返回失败*/
 	if (ext2_empty_dir(inode)) {
 		err = ext2_unlink(dir, dentry);
 		if (!err) {
@@ -414,13 +416,13 @@ out:
  * 目录文件的索引节点操作方法
  */
 struct inode_operations ext2_dir_inode_operations = {
-	.create		= ext2_create,
+	.create		= ext2_create, /*ext2 创建文件及其inode*/
 	.lookup		= ext2_lookup,
 	.link		= ext2_link,
 	.unlink		= ext2_unlink,
 	.symlink	= ext2_symlink,
-	.mkdir		= ext2_mkdir,
-	.rmdir		= ext2_rmdir,
+	.mkdir		= ext2_mkdir, /*ext2 创建目录及其inode*/
+	.rmdir		= ext2_rmdir, /*ext2 删除目录并dec其inode计数，内部并无释放inode操作*/
 	.mknod		= ext2_mknod,
 	.rename		= ext2_rename,
 #ifdef CONFIG_EXT2_FS_XATTR

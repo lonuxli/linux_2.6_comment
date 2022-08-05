@@ -102,7 +102,7 @@ struct buffer_head {
 	 */
 	struct buffer_head *b_this_page;/* circular list of page's buffers */
 	/**
-	 * 批向拥有该块的缓冲区页的描述符指针
+	 * 指向拥有该块的缓冲区页的描述符指针
 	 */
 	struct page *b_page;		/* the page this bh is mapped to */
 	/**
