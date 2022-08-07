@@ -999,8 +999,11 @@ struct task_struct {
 /* file system info */
 	/**
 	 * 文件系统在查找路径时使用，避免符号链接查找深度过深，导致死循环。
-	 * link_count是__do_follow_link递归调用的层次。
-	 * total_link_count调用__do_follow_link的总次数。
+	 * link_count是__do_follow_link递归调用的层次，概括讲即包含软链接分量的字符串路径
+	 * 中再次包含有（一个或多个，多个软分量时代码中是顺序处理不是嵌套处理）软链接分量，
+	 * 如此嵌套包含的计数即为link_count。
+	 * total_link_count调用__do_follow_link的总次数，概括讲即路径中包含的符号链接分量
+	 * 总数（囊括符号链接本身递归包含的符号链接分量）。
 	 */
 	int link_count, total_link_count;
 /* ipc stuff */

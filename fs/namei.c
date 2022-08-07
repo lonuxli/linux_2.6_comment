@@ -1591,6 +1591,7 @@ int open_namei(const char * pathname, int flag, int mode, struct nameidata *nd)
 	 */
 	/**
 	 * 有O_CREAT标志，则用LOOKUP_CREATE标志查找文件。
+	 * 如下入参有LOOKUP_PARENT标志，查找返回的nd中保存的是最后一个分量的父目录
 	 */
 	error = path_lookup(pathname, LOOKUP_PARENT|LOOKUP_OPEN|LOOKUP_CREATE, nd);
 	if (error)

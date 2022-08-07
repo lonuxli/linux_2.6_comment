@@ -97,6 +97,7 @@ void free_vfsmnt(struct vfsmount *mnt)
  */
 /**
  * 在散列表中查找一个描述符并返回它的地址。
+ * 找到挂载在入参mnt/dentry表示的挂载点处的vfsmount
  */
 struct vfsmount *lookup_mnt(struct vfsmount *mnt, struct dentry *dentry)
 {
@@ -112,7 +113,7 @@ struct vfsmount *lookup_mnt(struct vfsmount *mnt, struct dentry *dentry)
 			break;
 		p = list_entry(tmp, struct vfsmount, mnt_hash);
 		if (p->mnt_parent == mnt && p->mnt_mountpoint == dentry) {
-			/*找到挂载在入参mnt/dentry处的p(vfsmount)*/
+			/*找到挂载在入参mnt/dentry挂载点处的p(vfsmount)*/
 			found = mntget(p);
 			break;
 		}
